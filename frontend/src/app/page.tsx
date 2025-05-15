@@ -18,6 +18,7 @@ const App = () => {
   const [selectedPreview, setSelectedPreview] = useState<number | null>(null);
   const [buildStatus, setBuildStatus] = useState<string | null>(null);
   const [theme, setTheme] = useState<"modern" | "retro" | "dark">("modern");
+  const [conversationId, setConversationId] = useState()
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,9 +38,10 @@ const App = () => {
       const response = await fetch(CHAT_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({chat_uid: conversationId, messages: updatedMessages }),
       });
       const data = await response.json();
+      setConversationId(data.chat_uid);
       const botMessage = { role: "assistant", content: data.content };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {

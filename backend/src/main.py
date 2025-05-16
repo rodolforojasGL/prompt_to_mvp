@@ -7,11 +7,12 @@ from dotenv import load_dotenv
 import os
 import json
 
-from models.core_models import ChatRequest, ChatMessage, PromptRequest, PreviewResponse, CodeGenerationRequest, CodeGenerationResponse, BlueprintRequest
+from models.core_models import ChatRequest, CodeGenerationRequest, BlueprintRequest
 from logic.single_use import RefineRequirement
-from logic.workflows import code_and_review
+from logic.workflows import architect_code_review_workflow
 from logic.nodes import blueprint_generator
 from services.db import db
+import misc.prompts as prompt
 
 # Load credentials from .env file
 load_dotenv()
@@ -58,10 +59,24 @@ async def blueprint(req: BlueprintRequest):
     return {"blueprint": json.loads(b.blueprint)}
     
 
-@app.post("/build", response_model=CodeGenerationResponse)
+@app.post("/build", response_model=dict)
 async def generate_code(req: CodeGenerationRequest):
-    workflow = code_and_review(llm, MAX_ITERATIONS, REFLECT, req.blueprint, req.message).compile()
-    return workflow.invoke({"messages": [("user", req.message), ("user", str(req.blueprint))], "iterations": 0, "error": ""})
+    prompts = {
+        "architect_prompt": prompt.backend_architect_prompt,
+        "engineer_prompt": prompt.backend_engineer_prompt,
+        "engineer_retry_prompt": prompt.backend_engineer_retry_prompt,
+        "reviewer_prompt": prompt.backend_reviewer_prompt
+    }
+    workflow = architect_code_review_workflow(llm, prompts=prompts, max_iterations=3).compile()
+    return workflow.invoke(
+        {
+            "messages": [("user", req.message), ("user", str(req.blueprint))], 
+            "iterations": 0, 
+            "error": "",
+            "confidence_score": 0, 
+            "specs": "",
+            "requirements": f"{req.message}\n {req.blueprint}"
+        })
 
 if __name__ == "__main__":
     uvicorn.run(app, host=HOST_IP, port=PORT_NUMBER)

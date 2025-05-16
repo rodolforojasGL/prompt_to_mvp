@@ -2,42 +2,6 @@ from langgraph.graph import END, StateGraph, START
 
 from models.state import architect_code_review_graph_state
 from models.core_models import code_generation_model, reviewer_evaluation_model
-from logic.nodes import CodeAndReviewNodes
-
-
-class code_and_review():
-    def __init__(self, llm, max_iterations = 3, reflect = False, blueprint = "", message = ""):
-        self.llm = llm
-        self.max_iterations = max_iterations
-        self.reflect = reflect
-        self.compiled_workflow = None
-        self.blueprint = blueprint
-        self.message = message
-
-    def compile(self):
-        workflow = StateGraph(architect_code_review_graph_state)
-        code_and_review_nodes = CodeAndReviewNodes(self.max_iterations, self.reflect, self.llm, self.blueprint, self.message)
-
-        # Define the nodes
-        workflow.add_node("generate", code_and_review_nodes.generate_code)  # generation solution
-        workflow.add_node("check_code", code_and_review_nodes.review_code)  # check code
-        workflow.add_node("reflect", code_and_review_nodes.reflect)  # reflect
-
-        # Build graph
-        workflow.add_edge(START, "generate")
-        workflow.add_edge("generate", "check_code")
-        workflow.add_conditional_edges(
-            "check_code",
-            code_and_review_nodes.decide_to_finish,
-            {
-                "end": END,
-                "reflect": "reflect",
-                "generate": "generate",
-            },
-        )
-        workflow.add_edge("reflect", "generate")
-        self.compiled_workflow = workflow.compile()
-        return self.compiled_workflow
     
 class architect_code_review_workflow():
     def __init__(self, llm, prompts, max_iterations = 3, reflect = False):
@@ -87,13 +51,13 @@ class architect_code_review_workflow():
         # Append the architect's response to the conversation
         messages += [
             (
-                "architect",
+                "developer",
                 f"{response}"
             )
         ]
 
         # Return state
-        return {"generation": None, "messages": messages, "iterations": iterations}
+        return {"messages": messages, "iterations": iterations, "specs": response}
     
     def engineer(self, state: architect_code_review_graph_state):
         print("ENGINEERING CODE")
@@ -113,9 +77,9 @@ class architect_code_review_workflow():
         response = structured_output_llm.invoke(messages)
 
         # Append the engineer's response to the conversation
-        messages =+ [
+        messages += [
             (
-                "engineer",
+                "developer",
                 f"Here's my comments and description about the code: {response.engineer_comments}. \n Here's the code: {response.code}"
             )
         ]
@@ -134,8 +98,8 @@ class architect_code_review_workflow():
         specs = state["specs"]
         confidence_score = state["confidence_score"]
 
-        hydrated_reviewer_prompt = self.prompts["reviewer_prompt"][1]
-        hydrated_reviewer_prompt.replace("---code---", generation).replace("---requirements---", requirements).replace("---specs---", specs)
+        hydrated_reviewer_prompt = self.prompts["reviewer_prompt"][0][1]
+        hydrated_reviewer_prompt = hydrated_reviewer_prompt.replace("---code---", str(generation)).replace("---requirements---", str(requirements)).replace("---specs---", str(specs))
         messages += [
             (
                 "system",
@@ -148,16 +112,16 @@ class architect_code_review_workflow():
         response = structured_output_llm.invoke(messages)
 
         # Append the reviewer's response to the conversation
-        messages =+ [
+        messages += [
             (
-                "reviewer",
+                "developer",
                 f"Here's my comments and description about the code: {response.reviewer_comments}. \n Here's the confidence score: {response.confidence_score}"
             )
         ]
 
         # Increment
         iterations += 1
-        return {confidence_score: response.confidence_score, iterations: iterations}
+        return {"confidence_score": response.confidence_score, "iterations": iterations}
 
     def decide_to_finish(self, state: architect_code_review_graph_state):
         confidence_score = state["confidence_score"]

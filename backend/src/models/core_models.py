@@ -12,28 +12,13 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     chat_uid: Optional[str] = None
 
-class PromptRequest(BaseModel):
-    messages: List[ChatMessage]
-
-class PreviewResponse(BaseModel):
-    blueprint: dict
-    previews: List[str]
-
 class CodeGenerationRequest(BaseModel):
     blueprint: dict
     message: str
 
-class CodeGenerationResponse(BaseModel):
-    projectUrl: str
-
-class BackendCodeSchema(BaseModel):
-    prefix: str = Field(description="Description of the problem and approach")
-    imports: str = Field(description="Code block import statements")
-    code: str = Field(description="Code block not including import statements")
-
 class code_generation_model(BaseModel):
-    engineer_comments: str = Field(description="Comments and description from the engineer about the code generated")
-    code = str = Field(description="Code block")
+    engineer_comments: str = Field(description="Description of the problem and approach")
+    code: str = Field(description="Solution code block")
 
 class reviewer_evaluation_model(BaseModel):
     reviewer_comments: str = Field(description="Comments from confidence from the reviewer that the code fulfill requirements and specs")

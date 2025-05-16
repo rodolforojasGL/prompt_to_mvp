@@ -3,9 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import uvicorn
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages.utils import convert_to_messages
 from dotenv import load_dotenv
 import os
 import json
+
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
 
 from models.core_models import ChatRequest, CodeGenerationRequest, BlueprintRequest
 from logic.single_use import RefineRequirement
@@ -77,6 +81,45 @@ async def generate_code(req: CodeGenerationRequest):
             "specs": "",
             "requirements": f"{req.message}\n {req.blueprint}"
         })
+
+@app.websocket("/ws/code-generation")
+async def websocket_code_generation(websocket: WebSocket):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            user_message = data.get("message")
+            blueprint = data.get("blueprint")
+
+            async def send_update(message: str):
+                await websocket.send_json({"status": "update", "message": message})
+
+            prompts = {
+                "architect_prompt": prompt.backend_architect_prompt,
+                "engineer_prompt": prompt.backend_engineer_prompt,
+                "engineer_retry_prompt": prompt.backend_engineer_retry_prompt,
+                "reviewer_prompt": prompt.backend_reviewer_prompt
+            }
+
+            # Pass send_update to workflow constructor
+            workflow = architect_code_review_workflow(
+                llm, prompts=prompts, max_iterations=3, send_update=send_update
+            ).compile()
+
+            return await workflow.ainvoke({
+                "messages": [("user", user_message), ("user", str(blueprint))],
+                "iterations": 0,
+                "error": "",
+                "confidence_score": 0,
+                "specs": "",
+                "requirements": f"{user_message}\n{blueprint}"
+            })
+
+            await websocket.send_json({"status": "complete", "confidence_score": result.confidence_score, "full_history": result.messages})
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
 
 if __name__ == "__main__":
     uvicorn.run(app, host=HOST_IP, port=PORT_NUMBER)

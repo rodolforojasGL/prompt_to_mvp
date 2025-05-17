@@ -63,12 +63,12 @@ if ANTHROPIC_CHAT_MODEL and ANTHROPIC_API_KEY:
     anthropic_llm = ChatAnthropic(model_name=ANTHROPIC_CHAT_MODEL, temperature=0.3, api_key=ANTHROPIC_API_KEY)
 
 # DB setup
-db_service = db(connection_string=CONNECTION_STRING, db_name=DB_NAME)
+# db_service = db(connection_string=CONNECTION_STRING, db_name=DB_NAME)
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
     logger.debug(f"Called /chat. Request:{req.model_dump()}")
-    return await RefineRequirement(req, openai_llm, db_service)
+    return await RefineRequirement(req, openai_llm)
 
 @app.post('/blueprint')
 async def blueprint(req: BlueprintRequest):

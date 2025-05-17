@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 import uvicorn
@@ -19,6 +19,7 @@ from logic.workflows import architect_code_review_workflow
 from logic.nodes import blueprint_generator
 from services.db import db
 import misc.prompts as prompt
+from services.auth import verify_api_token, verify_ws_token
 
 # Load credentials from .env file
 load_dotenv()
@@ -75,15 +76,16 @@ async def blueprint(req: BlueprintRequest):
     
 
 @app.post("/build", response_model=dict)
-async def generate_code(req: CodeGenerationRequest):
+async def generate_code(req: CodeGenerationRequest, user_token=Depends(verify_api_token)):
     prompts = {
         "architect_prompt": prompt.backend_architect_prompt,
         "engineer_prompt": prompt.backend_engineer_prompt,
         "engineer_retry_prompt": prompt.backend_engineer_retry_prompt,
         "reviewer_prompt": prompt.backend_reviewer_prompt
     }
-    workflow = architect_code_review_workflow(openai_llm, prompts=prompts, max_iterations=3).compile()
-    return workflow.invoke(
+
+    workflow = architect_code_review_workflow(llm, prompts=prompts, max_iterations=3).compile()
+    return await workflow.ainvoke(
         {
             "messages": [("user", req.message), ("user", str(req.blueprint))], 
             "iterations": 0, 
@@ -95,6 +97,17 @@ async def generate_code(req: CodeGenerationRequest):
 
 @app.websocket("/ws/code-generation")
 async def websocket_code_generation(websocket: WebSocket):
+    auth_header = websocket.headers.get("Authorization")
+    if not auth_header or not auth_header.lower().startswith("bearer "):
+        await websocket.close(code=1008)
+        return
+
+    token = auth_header[7:]  # Strip 'Bearer '
+
+    if not verify_ws_token(token):
+        await websocket.close(code=1008)
+        return
+    
     await websocket.accept()
 
     try:
@@ -127,7 +140,7 @@ async def websocket_code_generation(websocket: WebSocket):
                 "requirements": f"{user_message}\n{blueprint}"
             })
 
-            await websocket.send_json({"status": "complete", "confidence_score": result["confidence_score"], "full_history": result["messages"]})
+            return await websocket.send_json({"status": "complete", "confidence_score": result["confidence_score"], "full_history": result["messages"]})
 
     except WebSocketDisconnect:
         print("Client disconnected")

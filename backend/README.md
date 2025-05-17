@@ -15,6 +15,14 @@ CHAT_MODEL=gemini-2.0-flash
 
 HOST_IP=0.0.0.0
 PORT_NUMBER=8000
+
+API_BEARER_TOKENS=
+
+CONNECTION_STRING=
+DB_NAME=
+
+HOST_IP=0.0.0.0
+PORT_NUMBER=8000
 ```
 
 Setup the Python's virtual environment 

@@ -107,7 +107,7 @@ async def websocket_code_generation(websocket: WebSocket):
                 llm, prompts=prompts, max_iterations=3, send_update=send_update
             ).compile()
 
-            return await workflow.ainvoke({
+            await workflow.ainvoke({
                 "messages": [("user", user_message), ("user", str(blueprint))],
                 "iterations": 0,
                 "error": "",

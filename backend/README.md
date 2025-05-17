@@ -12,6 +12,10 @@ First create a file called .env inside the backend folder and add these variable
 ```
 GOOGLE_API_KEY=
 CHAT_MODEL=gemini-2.0-flash
+OPENAI_CHAT_MODEL=
+OPENAI_API_KEY=
+ANTHROPIC_CHAT_MODEL=
+ANTHROPIC_API_KEY=
 
 HOST_IP=0.0.0.0
 PORT_NUMBER=8000

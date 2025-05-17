@@ -21,8 +21,12 @@ from services.db import db
 import misc.prompts as prompt
 from services.auth import verify_api_token, verify_ws_token
 
+from services.logger import logger
+
 # Load credentials from .env file
 load_dotenv()
+
+logger.debug("Starting app")
 
 app = FastAPI()
 
@@ -63,10 +67,12 @@ db_service = db(connection_string=CONNECTION_STRING, db_name=DB_NAME)
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    logger.debug(f"Called /chat. Request:{req.model_dump()}")
     return await RefineRequirement(req, openai_llm, db_service)
 
 @app.post('/blueprint')
 async def blueprint(req: BlueprintRequest):
+    logger.debug(f"Called /blueprint. Request:{req.model_dump()}")
     generator = blueprint_generator(llm=openai_llm)
     generator = generator.build()
 
@@ -77,6 +83,7 @@ async def blueprint(req: BlueprintRequest):
 
 @app.post("/build", response_model=dict)
 async def generate_code(req: CodeGenerationRequest, user_token=Depends(verify_api_token)):
+    logger.debug(f"Called /build. Request:{req.model_dump()}")
     prompts = {
         "architect_prompt": prompt.backend_architect_prompt,
         "engineer_prompt": prompt.backend_engineer_prompt,
@@ -84,7 +91,7 @@ async def generate_code(req: CodeGenerationRequest, user_token=Depends(verify_ap
         "reviewer_prompt": prompt.backend_reviewer_prompt
     }
 
-    workflow = architect_code_review_workflow(llm, prompts=prompts, max_iterations=3).compile()
+    workflow = architect_code_review_workflow(openai_llm, prompts=prompts, max_iterations=3).compile()
     return await workflow.ainvoke(
         {
             "messages": [("user", req.message), ("user", str(req.blueprint))], 
@@ -97,6 +104,7 @@ async def generate_code(req: CodeGenerationRequest, user_token=Depends(verify_ap
 
 @app.websocket("/ws/code-generation")
 async def websocket_code_generation(websocket: WebSocket):
+    logger.debug(f"Called /ws/code-generation.")
     auth_header = websocket.headers.get("Authorization")
     if not auth_header or not auth_header.lower().startswith("bearer "):
         await websocket.close(code=1008)

@@ -119,7 +119,7 @@ async def websocket_code_generation(websocket: WebSocket):
                 llm, prompts=prompts, max_iterations=3, send_update=send_update
             ).compile()
 
-            await workflow.ainvoke({
+            result = await workflow.ainvoke({
                 "messages": [("user", user_message), ("user", str(blueprint))],
                 "iterations": 0,
                 "error": "",
@@ -128,7 +128,7 @@ async def websocket_code_generation(websocket: WebSocket):
                 "requirements": f"{user_message}\n{blueprint}"
             })
 
-            await websocket.send_json({"status": "complete", "confidence_score": result.confidence_score, "full_history": result.messages})
+            return await websocket.send_json({"status": "complete", "confidence_score": result["confidence_score"], "full_history": result["messages"]})
 
     except WebSocketDisconnect:
         print("Client disconnected")

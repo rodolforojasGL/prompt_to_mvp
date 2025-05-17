@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import uvicorn
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages.utils import convert_to_messages
 from dotenv import load_dotenv
 import os
@@ -36,6 +38,10 @@ app.add_middleware(
 # OS environments
 CHAT_MODEL = os.getenv("CHAT_MODEL")
 LLM_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_CHAT_MODEL = os.getenv("ANTHROPIC_CHAT_MODEL")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
 HOST_IP = os.getenv("HOST_IP") if os.getenv("HOST_IP") else "0.0.0.0"
 PORT_NUMBER = int(os.getenv("PORT_NUMBER")) if os.getenv("PORT_NUMBER") else 8000 
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS")) if os.getenv("MAX_ITERATIONS") else 1
@@ -45,18 +51,23 @@ DB_NAME = os.getenv("DB_NAME")
 
 
 # LLM setup (via LangChain)
-llm = ChatGoogleGenerativeAI(model=CHAT_MODEL, temperature=0.3, google_api_key=LLM_API_KEY)
+if CHAT_MODEL and LLM_API_KEY:
+    google_llm = ChatGoogleGenerativeAI(model=CHAT_MODEL, temperature=0.3, google_api_key=LLM_API_KEY)
+if OPENAI_CHAT_MODEL and OPENAI_API_KEY:
+    openai_llm = ChatOpenAI(model=OPENAI_CHAT_MODEL, temperature=0.3, api_key=OPENAI_API_KEY)
+if ANTHROPIC_CHAT_MODEL and ANTHROPIC_API_KEY:
+    anthropic_llm = ChatAnthropic(model_name=ANTHROPIC_CHAT_MODEL, temperature=0.3, api_key=ANTHROPIC_API_KEY)
 
 # DB setup
 db_service = db(connection_string=CONNECTION_STRING, db_name=DB_NAME)
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    return await RefineRequirement(req, llm, db_service)
+    return await RefineRequirement(req, openai_llm, db_service)
 
 @app.post('/blueprint')
 async def blueprint(req: BlueprintRequest):
-    generator = blueprint_generator(llm=llm)
+    generator = blueprint_generator(llm=openai_llm)
     generator = generator.build()
 
     # workaround for error pydantic_core._pydantic_core.ValidationError
@@ -72,6 +83,7 @@ async def generate_code(req: CodeGenerationRequest, user_token=Depends(verify_ap
         "engineer_retry_prompt": prompt.backend_engineer_retry_prompt,
         "reviewer_prompt": prompt.backend_reviewer_prompt
     }
+
     workflow = architect_code_review_workflow(llm, prompts=prompts, max_iterations=3).compile()
     return await workflow.ainvoke(
         {
@@ -116,7 +128,7 @@ async def websocket_code_generation(websocket: WebSocket):
 
             # Pass send_update to workflow constructor
             workflow = architect_code_review_workflow(
-                llm, prompts=prompts, max_iterations=3, send_update=send_update
+                openai_llm, prompts=prompts, max_iterations=3, send_update=send_update
             ).compile()
 
             result = await workflow.ainvoke({

@@ -1,0 +1,136 @@
+'# Todo Application API Specification
+## User Authentication & Management
+
+### Register User
+- **HTTP METHOD**: POST
+- **URL PATH**: `/api/auth/register`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**: None
+- **HTTP STATUS CODES**:
+  - 201: Created
+  - 400: Bad Request
+  - 409: Conflict (Username already exists)
+- **REQUEST EXAMPLE**:
+```json
+{
+  "username": "johndoe",
+  "password": "securePassword123",
+  "email": "john.doe@example.com"
+}
+```
+- **RESPONSE EXAMPLE**:
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "created_at": "2023-07-10T15:30:45Z"
+}
+```
+
+### Login
+- **HTTP METHOD**: POST
+- **URL PATH**: `/api/auth/login`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**: None
+- **HTTP STATUS CODES**:
+  - 200: OK
+  - 401: Unauthorized
+  - 400: Bad Request
+- **REQUEST EXAMPLE**:
+```json
+{
+  "username": "johndoe",
+  "password": "securePassword123"
+}
+```
+- **RESPONSE EXAMPLE**:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": 1,
+  "username": "johndoe",
+  "expires_at": "2023-07-11T15:30:45Z"
+}
+```
+
+### Logout
+- **HTTP METHOD**: POST
+- **URL PATH**: `/api/auth/logout`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**: None
+- **HTTP STATUS CODES**:
+  - 200: OK
+  - 401: Unauthorized
+- **REQUEST EXAMPLE**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+- **RESPONSE EXAMPLE**:
+```json
+{
+  "message": "Successfully logged out"
+}
+```
+
+### Reset Password
+- **HTTP METHOD**: POST
+- **URL PATH**: `/api/auth/reset-password`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**: None
+- **HTTP STATUS CODES**:
+  - 200: OK
+  - 400: Bad Request
+  - 404: Not Found
+- **REQUEST EXAMPLE**:
+```json
+{
+  "email": "john.doe@example.com"
+}
+```
+- **RESPONSE EXAMPLE**:
+```json
+{
+  "message": "Password reset instructions sent to your email"
+}
+```
+
+## Task Management
+
+### Create Task
+- **HTTP METHOD**: POST
+- **URL PATH**: `/api/tasks`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**: None
+- **HTTP STATUS CODES**:
+  - 201: Created
+  - 400: Bad Request
+  - 401: Unauthorized
+- **REQUEST EXAMPLE**:
+```json
+{
+  "title": "Complete project proposal",
+  "description": "Finish the draft and send it to the team for review"
+}
+```
+- **RESPONSE EXAMPLE**:
+```json
+{
+  "id": 1,
+  "title": "Complete project proposal",
+  "description": "Finish the draft and send it to the team for review",
+  "completed": false,
+  "created_at": "2023-07-10T16:20:30Z",
+  "updated_at": "2023-07-10T16:20:30Z",
+  "user_id": 1
+}
+```
+
+### Get All Tasks
+- **HTTP METHOD**: GET
+- **URL PATH**: `/api/tasks`
+- **PATH VARIABLES**: None
+- **QUERY PARAMS**:
+  - `completed` (boolean, optional): Filter by completion status
+  - `sort` (string, optional): Sort by field (default: created_at)
+  - `order` (string, optional'

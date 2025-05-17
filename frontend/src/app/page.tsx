@@ -116,7 +116,7 @@ const App = () => {
                     : isDark
                       ? "bg-gray-600 text-white border-gray-400"
                       : "bg-gray-200 text-gray-800 border-gray-300"}`}>
-                {msg.content}
+                <div dangerouslySetInnerHTML={{ __html: msg.content }}></div>
               </span>
             </div>
           ))}

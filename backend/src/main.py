@@ -5,19 +5,16 @@ import uvicorn
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-from langchain_core.messages.utils import convert_to_messages
 from dotenv import load_dotenv
 import os
 import json
 
 from fastapi import WebSocket, WebSocketDisconnect
-import asyncio
 
 from models.core_models import ChatRequest, CodeGenerationRequest, BlueprintRequest
 from logic.single_use import RefineRequirement
 from logic.workflows import architect_code_review_workflow
 from logic.nodes import blueprint_generator
-from services.db import db
 import misc.prompts as prompt
 from services.auth import verify_api_token, verify_ws_token
 
@@ -67,9 +64,9 @@ if ANTHROPIC_CHAT_MODEL and ANTHROPIC_API_KEY:
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    logger.debug(f"Called /chat. Request:{req.model_dump()}")
-    return await RefineRequirement(req, openai_llm)
-
+   UserContext = await RefineRequirement(req, openai_llm)
+   return UserContext
+    
 @app.post('/blueprint')
 async def blueprint(req: BlueprintRequest):
     logger.debug(f"Called /blueprint. Request:{req.model_dump()}")

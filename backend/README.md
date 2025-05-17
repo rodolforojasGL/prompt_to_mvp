@@ -25,8 +25,7 @@ API_BEARER_TOKENS=
 CONNECTION_STRING=
 DB_NAME=
 
-HOST_IP=0.0.0.0
-PORT_NUMBER=8000
+LOG_LEVEL=DEBUG
 ```
 
 Setup the Python's virtual environment 

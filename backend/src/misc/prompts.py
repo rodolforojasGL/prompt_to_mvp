@@ -4,6 +4,9 @@ load_dotenv()
 
 FEASABILITY = os.getenv("FEASABILITY")
 
+if FEASABILITY is None:
+    FEASABILITY = 80
+
 system_prompt = """
     You are an expert proyect manager and software architect that designs full-stack applications. \n
     You will mostly paraphrase the idea and rapport. \n
@@ -104,7 +107,7 @@ Produce a detailed feasibility report whit this specifications
 - A list of max 10 Identified functionalities with title and a short description.
 - 5 Questions for the user to clarify the concept, with title 'Questions' and NO description, just the list of questions.
 - A clear indicator using this format in color red 'FEASIBLE: 0%' between 0 and 100.00 %, where 0 represents the idea is infeasible and the requierement is not clear and 100 % represents feasible and the user already answer the questions.
-- isFeasable section when FEASIBLE indicator is greater than """+FEASABILITY+""" %
+- isFeasable section when FEASIBLE indicator is greater than {FEASABILITY} %
 - Follow the next HTML example 
 
 <div id='isFeasible' style="background-color:#0000001f;padding:5px;color:#008072;border-radius:8px;margin-bottom:5px">

@@ -12,7 +12,7 @@ load_dotenv()
 ANTHROPIC_CHAT_MODEL = os.getenv("ANTHROPIC_CHAT_MODEL")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") 
 
-anthropic_llm = ChatAnthropic(model_name="ANTHROPIC_CHAT_MODEL", temperature=0.0, api_key="ANTHROPIC_API_KEY")
+anthropic_llm = ChatAnthropic(model_name=ANTHROPIC_CHAT_MODEL, temperature=0.0, api_key=ANTHROPIC_API_KEY)
 
 
 def web_api_specification_generator_node(state: CodeSpecState) -> Command[Literal['supervisor']] :
@@ -49,7 +49,7 @@ def web_api_specification_generator_node(state: CodeSpecState) -> Command[Litera
         Requirements:
         {requirements}
 
-        Format the response as a structured list of endpoints with all the details mentioned above.
+         You must format the api specification as YML format optimized the output result to use as less lines as possible, use \n to break lines. it should be be suitable to generate Swagger API documentation
         """)
     ]
 
@@ -58,6 +58,7 @@ def web_api_specification_generator_node(state: CodeSpecState) -> Command[Litera
     
     # Get response from LLM
     response = anthropic_llm.invoke(messages)
+    updated_response_only_yaml_spec = clear_out_llm_respone(response.content)
     
     # Return command to go back to supervisor with updated messages
     return Command(
@@ -66,7 +67,7 @@ def web_api_specification_generator_node(state: CodeSpecState) -> Command[Litera
             "messages": [
                  HumanMessage(content=response.content, name="specs")
             ],
-            "api_spec": response.content
+            "api_spec": updated_response_only_yaml_spec
         }
     )
 
@@ -80,6 +81,21 @@ doc_spec_builder.add_node("api_specification_generator", web_api_specification_g
 doc_spec_builder.add_edge(START, "supervisor")
 doc_spec_generator_graph = doc_spec_builder.compile()
 
+def clear_out_llm_respone(respone: str) -> str:
+    """Remove yaml text from the beginning of the response"""
+    # Clone response to avoid modifying original
+    clone_response = respone[:]
+    
+    # Find and remove ```yaml from anywhere in the string
+    # Find and remove ```yaml
+    if "```yaml" in clone_response:
+        clone_response = clone_response.replace("```yaml", "")
+    
+    # Find and remove closing ```
+    if "```" in clone_response:
+        clone_response = clone_response.replace("```", "")
+        
+    return clone_response.strip()
 
 if __name__ == "__main__":
 
@@ -106,3 +122,6 @@ Based on your idea, here are the functional requirements for a todo application 
     {"recursion_limit": 100},
 ):
         print(s)
+        if 'api_specification_generator' in s:
+            with open("file_api.yml", "w") as f:
+                f.write(clear_out_llm_respone(s['api_specification_generator']['messages'][0].content))
